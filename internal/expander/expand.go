@@ -373,9 +373,9 @@ func writeResult(c contract.Contract, contractDigest string, scenario contract.S
 		ExpandedIRPath:    filepath.Join("scenarios", scenario.ID, "expanded-ir.json"),
 		GeneratedGoPath:   filepath.Join("scenarios", scenario.ID, "generated.go"),
 		TerminalPath:      filepath.Join("scenarios", scenario.ID, "terminal-record.json"),
-		ExpandedIRDigest:  digestJSON(ir),
+		ExpandedIRDigest:  digestWrittenJSON(ir),
 		GeneratedGoDigest: digestBytes(generated),
-		TerminalDigest:    digestJSON(terminal),
+		TerminalDigest:    digestWrittenJSON(terminal),
 		Terminal:          terminal,
 		Replay:            replay,
 	}, ir, nil
@@ -415,12 +415,27 @@ func digestJSON(value any) string {
 }
 
 func writeJSON(path string, value any) error {
-	data, err := json.MarshalIndent(value, "", "  ")
+	data, err := indentedJSON(value)
 	if err != nil {
 		return err
 	}
-	data = append(data, '\n')
 	return os.WriteFile(path, data, 0o644)
+}
+
+func indentedJSON(value any) ([]byte, error) {
+	data, err := json.MarshalIndent(value, "", "  ")
+	if err != nil {
+		return nil, err
+	}
+	return append(data, '\n'), nil
+}
+
+func digestWrittenJSON(value any) string {
+	data, err := indentedJSON(value)
+	if err != nil {
+		return ""
+	}
+	return digestBytes(data)
 }
 
 func cloneVisible(values map[string]string) map[string]string {
