@@ -45,6 +45,8 @@ jobs:
         env:
           VERSION: ${{ inputs.version }}
         run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git tag -a "$VERSION" "$GITHUB_SHA" -m "gooo-staged-quasiquote-slice $VERSION"
           git push origin "$VERSION"
 
