@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "gooo staged quasiquote CI evidence",
+  "type": "object",
+  "required": ["schema", "authority", "inventory", "runtime", "tests", "generated_artifacts", "corpus", "improvement"],
+  "properties": {
+    "schema": {"const": "gooo.ci-evidence/v1"},
+    "authority": {"const": "github-actions"},
+    "inventory": {"type": "object"},
+    "runtime": {"type": "object"},
+    "tests": {"type": "object"},
+    "generated_artifacts": {"type": "object"},
+    "corpus": {"type": "object"},
+    "improvement": {"type": "object"}
+  }
+}

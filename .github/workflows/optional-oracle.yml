@@ -1,0 +1,24 @@
+name: Optional origin oracle
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  advisory:
+    name: advisory-origin-oracle
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: Consume immutable resolver release as advisory input
+        run: bash scripts/optional-oracle.sh "$RUNNER_TEMP/gooo-optional-oracle"
+      - name: Upload advisory evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gooo-optional-origin-oracle-${{ github.run_id }}
+          path: ${{ runner.temp }}/gooo-optional-oracle
+          if-no-files-found: warn

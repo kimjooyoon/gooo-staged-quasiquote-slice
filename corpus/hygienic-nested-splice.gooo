@@ -1,0 +1,2 @@
+# Scenario selection is declared by .gooo/staged-quasiquote.gooo.
+scenario hygienic-nested-splice
