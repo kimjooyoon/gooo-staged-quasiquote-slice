@@ -67,7 +67,7 @@ func EmitGenerated(ir ExpandedIR) []byte {
 	}
 	out.WriteString("\t},\n\tCaptureDecision: ")
 	out.WriteString(strconv.Quote(ir.Terminal.CaptureDecision))
-	out.WriteString("\n}\n\n")
+	out.WriteString(",\n}\n\n")
 	out.WriteString("func main() {\n\tfmt.Println(Terminal.Decision)\n}\n")
 	return []byte(out.String())
 }
