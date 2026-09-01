@@ -1,0 +1,19 @@
+{
+  "schema": "gooo.optional-oracle-lock/v1",
+  "optional": true,
+  "required_cross_project_gate": false,
+  "repository": "kimjooyoon/gooo-hygienic-origin-resolver",
+  "release_url": "https://github.com/kimjooyoon/gooo-hygienic-origin-resolver/releases/tag/v0.1.1",
+  "tag": {
+    "name": "v0.1.1",
+    "annotated": true,
+    "tag_object_sha": "b7ab8f0e21104d8dcd37c0557f264d8f763eeffd",
+    "target_commit_sha": "17933b4e7a724a622652c73de04f7973c524bec9"
+  },
+  "asset": {
+    "name": "gooo-hygienic-origin-resolver-v0.1.1.tar.gz",
+    "size_bytes": 24885,
+    "sha256": "sha256:83b3b2b13c5dabe41b4730eeb4ef9371d1f0d04e20c86e52c7da099377e7ceac"
+  },
+  "consumption": "The optional oracle may provide advisory origin evidence; it cannot change a local .gooo judgment or required CI result."
+}

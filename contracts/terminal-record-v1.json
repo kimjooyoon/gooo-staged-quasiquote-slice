@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "gooo terminal record v1",
+  "type": "object",
+  "required": [
+    "schema",
+    "decision",
+    "stage",
+    "step",
+    "reason",
+    "unknown_class",
+    "next_operation",
+    "blocked_by",
+    "counterexample",
+    "counterexample_digest",
+    "phase_separation_proof_path",
+    "capture_decision"
+  ],
+  "properties": {
+    "schema": {"const": "gooo.terminal-record/v1"},
+    "decision": {"enum": ["CLOSED", "UNKNOWN", "REFUTED"]},
+    "stage": {"type": "string"},
+    "step": {"type": "string"},
+    "reason": {"type": "string"},
+    "unknown_class": {"type": "string"},
+    "next_operation": {"type": "string"},
+    "blocked_by": {"type": "array", "items": {"type": "string"}},
+    "counterexample": {"type": "string"},
+    "counterexample_digest": {"type": "string"},
+    "phase_separation_proof_path": {"type": "array", "minItems": 1},
+    "capture_decision": {"type": "string", "minLength": 1}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"decision": {"const": "UNKNOWN"}}},
+      "then": {
+        "properties": {
+          "stage": {"minLength": 1},
+          "step": {"minLength": 1},
+          "reason": {"minLength": 1},
+          "unknown_class": {"minLength": 1},
+          "next_operation": {"minLength": 1},
+          "blocked_by": {"minItems": 1}
+        }
+      }
+    }
+  ]
+}

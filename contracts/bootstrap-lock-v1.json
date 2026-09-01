@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "gooo staged quasiquote bootstrap lock",
+  "type": "object",
+  "required": ["schema", "repository", "release", "bootstrap_commit_sha", "bootstrap_paths", "functional_changes_via_pull_request"],
+  "properties": {
+    "schema": {"const": "gooo.bootstrap-lock/v1"},
+    "repository": {"const": "kimjooyoon/gooo-repository-bootstrap"},
+    "release": {
+      "type": "object",
+      "required": ["tag", "immutable", "asset"],
+      "properties": {
+        "tag": {"const": "v0.1.1"},
+        "immutable": {"const": true},
+        "asset": {
+          "type": "object",
+          "required": ["name", "sha256"],
+          "properties": {
+            "name": {"const": "gooo-evidence-0.1.1.json"},
+            "sha256": {"const": "sha256:dc204e92d219e291b9568f18affd556f226fc54114c008d00e6189ea169c9076"}
+          }
+        }
+      }
+    },
+    "bootstrap_commit_sha": {"const": "00b69fa7fbc43d1ee6d298a7cd32363382c73584"},
+    "bootstrap_paths": {
+      "const": [".gitignore", "LICENSE", "README.md"]
+    },
+    "functional_changes_via_pull_request": {"const": true}
+  }
+}

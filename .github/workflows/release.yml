@@ -1,0 +1,94 @@
+name: Immutable release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Annotated release version
+        required: true
+        default: v0.1.0
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Go 1.27
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          check-latest: true
+
+      - name: Enable immutable releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api --method PUT "repos/${GITHUB_REPOSITORY}/immutable-releases"
+
+      - name: Refuse reused release names
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          if git rev-parse --verify "refs/tags/$VERSION" >/dev/null 2>&1; then
+            echo "tag $VERSION already exists" >&2
+            exit 1
+          fi
+          if gh release view "$VERSION" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "release $VERSION already exists" >&2
+            exit 1
+          fi
+
+      - name: Create annotated tag
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          git tag -a "$VERSION" "$GITHUB_SHA" -m "gooo-staged-quasiquote-slice $VERSION"
+          git push origin "$VERSION"
+
+      - name: Package exact release assets
+        env:
+          VERSION: ${{ inputs.version }}
+        run: bash scripts/package-release.sh "$VERSION" "$RUNNER_TEMP/gooo-release"
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          gh release create "$VERSION" \
+            --repo "$GITHUB_REPOSITORY" \
+            --verify-tag \
+            --title "gooo-staged-quasiquote-slice $VERSION" \
+            --notes "Immutable release. GitHub Actions is the verification authority." \
+            "$RUNNER_TEMP/gooo-release"/*
+
+      - name: Verify immutable release and tag target
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          release="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$VERSION")"
+          test "$(jq -r '.immutable' <<<"$release")" = true
+          tag_ref="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$VERSION")"
+          tag_object="$(jq -r '.object.sha' <<<"$tag_ref")"
+          tag_type="$(jq -r '.object.type' <<<"$tag_ref")"
+          test "$tag_type" = tag
+          tag="$(gh api "repos/$GITHUB_REPOSITORY/git/tags/$tag_object")"
+          test "$(jq -r '.object.sha' <<<"$tag")" = "$GITHUB_SHA"
+          while read -r digest name; do
+            test -f "$RUNNER_TEMP/gooo-release/$name"
+            expected_digest="sha256:$digest"
+            actual_digest="$(jq -r --arg name "$name" '.assets[] | select(.name == $name) | .digest' <<<"$release")"
+            actual_size="$(jq -r --arg name "$name" '.assets[] | select(.name == $name) | .size' <<<"$release")"
+            expected_size="$(stat -c %s "$RUNNER_TEMP/gooo-release/$name")"
+            test "$actual_digest" = "$expected_digest"
+            test "$actual_size" = "$expected_size"
+          done < "$RUNNER_TEMP/gooo-release/SHA256SUMS"

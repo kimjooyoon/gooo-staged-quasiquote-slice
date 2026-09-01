@@ -1,0 +1,96 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  required:
+    name: required-gooo-verification
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Install Go 1.27
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          check-latest: true
+
+      - name: Confirm declared toolchain
+        run: |
+          case "$(go env GOVERSION)" in
+            go1.27*) ;;
+            *) echo "expected Go 1.27, got $(go env GOVERSION)" >&2; exit 1 ;;
+          esac
+
+      - name: Check Go formatting
+        run: test -z "$(gofmt -l .)"
+
+      - name: Prepare caller-owned evidence directory
+        run: mkdir -p "$RUNNER_TEMP/gooo-staged-quasiquote-evidence/bin" "$RUNNER_TEMP/gooo-staged-quasiquote-evidence/timing"
+
+      - name: Compile packages
+        run: bash scripts/measure-command.sh "$RUNNER_TEMP/gooo-staged-quasiquote-evidence/timing/compile.json" go test -run '^$' ./...
+
+      - name: Build executors
+        run: |
+          bash scripts/measure-command.sh "$RUNNER_TEMP/gooo-staged-quasiquote-evidence/timing/build.json" \
+            sh -c "go build -o '$RUNNER_TEMP/gooo-staged-quasiquote-evidence/bin/gooo-expander' ./cmd/gooo-expander && go build -o '$RUNNER_TEMP/gooo-staged-quasiquote-evidence/bin/gooo-verify' ./cmd/gooo-verify"
+
+      - name: Vet packages
+        run: go vet ./...
+
+      - name: Run Go tests
+        run: |
+          bash scripts/measure-command.sh "$RUNNER_TEMP/gooo-staged-quasiquote-evidence/timing/test.json" go test -json ./...
+          cp "$RUNNER_TEMP/gooo-staged-quasiquote-evidence/timing/test.stdout" "$RUNNER_TEMP/gooo-staged-quasiquote-evidence/timing/go-test.json"
+
+      - name: Run declared corpus
+        run: |
+          bash scripts/measure-command.sh "$RUNNER_TEMP/gooo-staged-quasiquote-evidence/timing/conformance.json" \
+            "$RUNNER_TEMP/gooo-staged-quasiquote-evidence/bin/gooo-expander" conformance \
+            --contract .gooo/staged-quasiquote.gooo \
+            --output-dir "$RUNNER_TEMP/gooo-staged-quasiquote-evidence/conformance"
+
+      - name: Verify expanded IR and generated Go
+        run: |
+          "$RUNNER_TEMP/gooo-staged-quasiquote-evidence/bin/gooo-verify" verify \
+            --contract .gooo/staged-quasiquote.gooo \
+            --conformance-dir "$RUNNER_TEMP/gooo-staged-quasiquote-evidence/conformance"
+
+      - name: Build and execute every generated Go artifact
+        run: |
+          bash scripts/measure-command.sh "$RUNNER_TEMP/gooo-staged-quasiquote-evidence/timing/integration.json" \
+            bash scripts/integration.sh "$RUNNER_TEMP/gooo-staged-quasiquote-evidence"
+
+      - name: Write exact CI evidence
+        if: always()
+        run: |
+          if [[ -f "$RUNNER_TEMP/gooo-staged-quasiquote-evidence/timing/go-test.json" && -f "$RUNNER_TEMP/gooo-staged-quasiquote-evidence/conformance/conformance.json" ]]; then
+            bash scripts/write-evidence.sh \
+              "$GITHUB_WORKSPACE" \
+              "$RUNNER_TEMP/gooo-staged-quasiquote-evidence/conformance" \
+              "$RUNNER_TEMP/gooo-staged-quasiquote-evidence/timing" \
+              "$RUNNER_TEMP/gooo-staged-quasiquote-evidence/timing/go-test.json" \
+              "$RUNNER_TEMP/gooo-staged-quasiquote-evidence/conformance/conformance.json" \
+              "$RUNNER_TEMP/gooo-staged-quasiquote-evidence/gooo-ci-evidence.json"
+          else
+            echo '{"schema":"gooo.ci-evidence/v1","authority":"github-actions","status":"UNKNOWN","reason":"verification stopped before evidence aggregation"}' > "$RUNNER_TEMP/gooo-staged-quasiquote-evidence/gooo-ci-evidence.json"
+          fi
+
+      - name: Upload CI evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gooo-ci-evidence-${{ github.run_id }}
+          path: ${{ runner.temp }}/gooo-staged-quasiquote-evidence
+          if-no-files-found: error
+          retention-days: 90

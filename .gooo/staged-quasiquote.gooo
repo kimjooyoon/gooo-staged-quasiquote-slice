@@ -1,0 +1,310 @@
+{
+  "schema": "gooo.staged-quasiquote/v1",
+  "authority": "metacode",
+  "contract_id": "gooo-staged-quasiquote-slice",
+  "toolchain": {"go": "1.27"},
+  "semantics": {
+    "quote": {
+      "construct": "AST",
+      "stage_rule": "quote introduces an AST boundary without evaluating child text",
+      "output": "ast_node"
+    },
+    "splice": {
+      "construct": "AST_SEQUENCE",
+      "same_stage": "CLOSED",
+      "cross_stage": "REFUTED",
+      "stage_rule": "splice may insert only a structured AST sequence at the same stage"
+    },
+    "stage_levels": {
+      "source": 0,
+      "macro": 1,
+      "generated": 2
+    },
+    "origin_identity": {
+      "algorithm": "sha256",
+      "inputs": ["origin_identity", "stage_level", "node_id"],
+      "delimiter": "|",
+      "prefix": "origin_",
+      "identity_chars": 16
+    },
+    "phase_effects": {
+      "allowed": ["pure-expand"],
+      "forbidden_compile_time": ["filesystem-write", "network-write", "process-exec"],
+      "judgment": "REFUTED"
+    },
+    "capture_judgments": {
+      "fresh_collision": "ALPHA_RENAME",
+      "no_collision": "CAPTURE_FREE",
+      "cross_stage_reference": "CROSS_STAGE_REFUTED",
+      "missing_origin": "MISSING_ORIGIN",
+      "forbidden_compile_time_effect": "FORBIDDEN_COMPILE_TIME_EFFECT",
+      "replay_stable": "REPLAY_STABLE"
+    },
+    "status_precedence": ["REFUTED", "UNKNOWN", "CLOSED"],
+    "unknown": {
+      "stage": "origin",
+      "step": "prove-origin-identity",
+      "reason": "origin identity is missing and cannot be replayed",
+      "unknown_class": "missing-origin",
+      "next_operation": "supply origin identity and replay the same scenario",
+      "blocked_by": ["incomplete-origin-proof", "stable-capture-identity"]
+    },
+    "denominator": {
+      "scenarios": [
+        "same-stage-splice",
+        "hygienic-nested-splice",
+        "cross-stage-reference",
+        "missing-origin",
+        "forbidden-compile-time-effect",
+        "replay"
+      ],
+      "status_counts": {"CLOSED": 3, "UNKNOWN": 1, "REFUTED": 2},
+      "improvement": "UNKNOWN unless matched scenario, source, contract, and toolchain before/after integers exist",
+      "root_readme_excluded_from_inventory": true
+    },
+    "generation_plan": [
+      "parse this .gooo contract as structured data",
+      "evaluate quote and splice with declared stage levels",
+      "derive origin identity from the declared origin triple",
+      "resolve references by stage and origin identity",
+      "reject forbidden compile-time effects before emission",
+      "emit generated Go as typed AST structures only",
+      "preserve terminal proof and capture evidence in replay"
+    ],
+    "phase_separation": {
+      "proof_path": [
+        {
+          "step": "parse-contract",
+          "from": "gooo-source",
+          "to": "structured-semantics",
+          "rule": "the .gooo contract owns meaning, denominator, judgments, and generation plan"
+        },
+        {
+          "step": "expand-ast",
+          "from": "stage-level-expression",
+          "to": "ast-node",
+          "rule": "quote and same-stage splice produce structured AST nodes"
+        },
+        {
+          "step": "emit-generated-go",
+          "from": "expanded-ast-ir",
+          "to": "typed-go-data",
+          "rule": "the emitter serializes AST fields and never replaces source text"
+        }
+      ]
+    },
+    "no_arbitrary_string_replacement": true
+  },
+  "scenarios": [
+    {
+      "id": "same-stage-splice",
+      "description": "same-stage splice inserts a quoted AST sequence and closes",
+      "source": "corpus/same-stage-splice.gooo",
+      "expected_status": "CLOSED",
+      "expressions": [
+        {
+          "op": "quote",
+          "id": "q.same",
+          "stage": 1,
+          "origin_identity": "origin.same.quote",
+          "phase_effect": "pure-expand",
+          "name": "fragment",
+          "children": [
+            {
+              "op": "splice",
+              "id": "s.same",
+              "stage": 1,
+              "target_stage": 1,
+              "origin_identity": "origin.same.splice",
+              "phase_effect": "pure-expand",
+              "children": [
+                {
+                  "op": "atom",
+                  "id": "a.same",
+                  "stage": 1,
+                  "origin_identity": "origin.same.atom",
+                  "phase_effect": "pure-expand",
+                  "name": "literal",
+                  "value": "hello"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "hygienic-nested-splice",
+      "description": "nested same-stage splices preserve origin identity and alpha-rename collisions",
+      "source": "corpus/hygienic-nested-splice.gooo",
+      "expected_status": "CLOSED",
+      "expressions": [
+        {
+          "op": "quote",
+          "id": "q.outer",
+          "stage": 1,
+          "origin_identity": "origin.nested.outer",
+          "phase_effect": "pure-expand",
+          "name": "tmp",
+          "children": [
+            {
+              "op": "splice",
+              "id": "s.outer",
+              "stage": 1,
+              "target_stage": 1,
+              "origin_identity": "origin.nested.outer.splice",
+              "phase_effect": "pure-expand",
+              "children": [
+                {
+                  "op": "quote",
+                  "id": "q.inner",
+                  "stage": 1,
+                  "origin_identity": "origin.nested.inner",
+                  "phase_effect": "pure-expand",
+                  "name": "tmp",
+                  "children": [
+                    {
+                      "op": "splice",
+                      "id": "s.inner",
+                      "stage": 1,
+                      "target_stage": 1,
+                      "origin_identity": "origin.nested.inner.splice",
+                      "phase_effect": "pure-expand",
+                      "children": [
+                        {
+                          "op": "atom",
+                          "id": "a.inner",
+                          "stage": 1,
+                          "origin_identity": "origin.nested.inner.atom",
+                          "phase_effect": "pure-expand",
+                          "value": "inner"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "cross-stage-reference",
+      "description": "a source-stage reference into a macro-stage target is refuted",
+      "source": "corpus/cross-stage-reference.gooo",
+      "expected_status": "REFUTED",
+      "expressions": [
+        {
+          "op": "reference",
+          "id": "r.cross",
+          "stage": 0,
+          "target_stage": 1,
+          "origin_identity": "origin.cross.reference",
+          "phase_effect": "pure-expand",
+          "name": "x"
+        }
+      ]
+    },
+    {
+      "id": "missing-origin",
+      "description": "a quote without origin identity remains UNKNOWN",
+      "source": "corpus/missing-origin.gooo",
+      "expected_status": "UNKNOWN",
+      "expressions": [
+        {
+          "op": "quote",
+          "id": "q.unknown",
+          "stage": 1,
+          "origin_identity": "",
+          "phase_effect": "pure-expand",
+          "name": "broken",
+          "children": [
+            {
+              "op": "atom",
+              "id": "a.unknown",
+              "stage": 1,
+              "origin_identity": "origin.unknown.atom",
+              "phase_effect": "pure-expand",
+              "value": "unproved"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "forbidden-compile-time-effect",
+      "description": "filesystem write during compile-time expansion is refuted",
+      "source": "corpus/forbidden-compile-time-effect.gooo",
+      "expected_status": "REFUTED",
+      "expressions": [
+        {
+          "op": "effect",
+          "id": "e.write",
+          "stage": 1,
+          "origin_identity": "origin.effect.write",
+          "phase_effect": "compile-time",
+          "effect": "filesystem-write"
+        }
+      ]
+    },
+    {
+      "id": "replay",
+      "description": "replaying the hygienic nested splice preserves AST and capture decisions",
+      "source": "corpus/replay.gooo",
+      "expected_status": "CLOSED",
+      "replay_of": "hygienic-nested-splice",
+      "expected_replay": true,
+      "expressions": [
+        {
+          "op": "quote",
+          "id": "q.outer",
+          "stage": 1,
+          "origin_identity": "origin.nested.outer",
+          "phase_effect": "pure-expand",
+          "name": "tmp",
+          "children": [
+            {
+              "op": "splice",
+              "id": "s.outer",
+              "stage": 1,
+              "target_stage": 1,
+              "origin_identity": "origin.nested.outer.splice",
+              "phase_effect": "pure-expand",
+              "children": [
+                {
+                  "op": "quote",
+                  "id": "q.inner",
+                  "stage": 1,
+                  "origin_identity": "origin.nested.inner",
+                  "phase_effect": "pure-expand",
+                  "name": "tmp",
+                  "children": [
+                    {
+                      "op": "splice",
+                      "id": "s.inner",
+                      "stage": 1,
+                      "target_stage": 1,
+                      "origin_identity": "origin.nested.inner.splice",
+                      "phase_effect": "pure-expand",
+                      "children": [
+                        {
+                          "op": "atom",
+                          "id": "a.inner",
+                          "stage": 1,
+                          "origin_identity": "origin.nested.inner.atom",
+                          "phase_effect": "pure-expand",
+                          "value": "inner"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
