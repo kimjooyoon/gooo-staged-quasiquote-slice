@@ -74,7 +74,7 @@ jobs:
       - name: Write exact CI evidence
         if: always()
         run: |
-          if [[ -f "$RUNNER_TEMP/gooo-staged-quasiquote-evidence/timing/go-test.json" && -f "$RUNNER_TEMP/gooo-staged-quasiquote-evidence/conformance/conformance.json" ]]; then
+          if [[ -f "$RUNNER_TEMP/gooo-staged-quasiquote-evidence/timing/go-test.json" && -f "$RUNNER_TEMP/gooo-staged-quasiquote-evidence/timing/compile.json" && -f "$RUNNER_TEMP/gooo-staged-quasiquote-evidence/timing/build.json" && -f "$RUNNER_TEMP/gooo-staged-quasiquote-evidence/timing/conformance.json" && -f "$RUNNER_TEMP/gooo-staged-quasiquote-evidence/timing/integration.json" && -f "$RUNNER_TEMP/gooo-staged-quasiquote-evidence/conformance/conformance.json" ]]; then
             bash scripts/write-evidence.sh \
               "$GITHUB_WORKSPACE" \
               "$RUNNER_TEMP/gooo-staged-quasiquote-evidence/conformance" \

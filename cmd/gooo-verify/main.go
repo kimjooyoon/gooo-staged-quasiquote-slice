@@ -13,7 +13,11 @@ func main() {
 	flags := flag.NewFlagSet("verify", flag.ExitOnError)
 	contractPath := flags.String("contract", ".gooo/staged-quasiquote.gooo", "authoritative .gooo contract")
 	conformanceDir := flags.String("conformance-dir", "", "caller-owned conformance output directory")
-	_ = flags.Parse(os.Args[1:])
+	args := os.Args[1:]
+	if len(args) > 0 && args[0] == "verify" {
+		args = args[1:]
+	}
+	_ = flags.Parse(args)
 	if *conformanceDir == "" {
 		fail("verify requires --conformance-dir")
 	}
